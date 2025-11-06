@@ -26,3 +26,9 @@ or submit a job that does it for us
 ```
 sbatch julia_add_packages_overlay.sh
 ```
+This job could last up to 5 hours. Make sure to allocate enough time. To check that everything worked out, we can run a job that enters the overlay and uses those packages
+```
+sbatch debug.sh
+```
+If it doesn't recognize some packages, try to rerun the add packages command, to make sure it finishes. Another possibility is that you didn't allocate enough space for the overlay, that can be resized.
+If everything worked out, enjoy :)
