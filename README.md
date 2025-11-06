@@ -30,5 +30,12 @@ This job could last up to 5 hours. Make sure to allocate enough time. To check t
 ```
 sbatch debug.sh
 ```
-If it doesn't recognize some packages, try to rerun the add packages command, to make sure it finishes. Another possibility is that you didn't allocate enough space for the overlay, that can be resized.
+If it doesn't recognize some packages, try to rerun the add packages command, to make sure it finishes. Another possibility is that you didn't allocate enough space for the overlay, that can be resized. To check the occupied space of the overlay, run
+```
+du -sh /path/to/overlay/julia_overlay.img 
+```
+You can extend it with
+```
+truncate -s +2G /path/to/overlay/julia_overlay.img
+```
 If everything worked out, enjoy :)
