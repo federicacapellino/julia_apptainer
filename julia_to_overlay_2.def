@@ -1,0 +1,37 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+
+%post
+    apt-get update && apt-get install -y \
+        wget \
+        tar \
+        bzip2 \
+        git \
+        build-essential \
+        ca-certificates \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install Julia v1.12.1
+    JULIA_VERSION=1.12.1
+    wget https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VERSION%.*}/julia-$JULIA_VERSION-linux-x86_64.tar.gz
+    tar -xzf julia-$JULIA_VERSION-linux-x86_64.tar.gz -C /opt
+    ln -s /opt/julia-$JULIA_VERSION/bin/julia /usr/local/bin/julia
+    rm julia-$JULIA_VERSION-linux-x86_64.tar.gz
+
+    # Create read-only depot for built-in packages
+    export JULIA_DEPOT_PATH=/opt/julia_depot
+    mkdir -p $JULIA_DEPOT_PATH
+    julia --project -e 'using Pkg; \
+        Pkg.add(url="https://github.com/fafafrens/Fluidum.jl"); \
+        Pkg.add(url="https://github.com/AndreasKirchner/MonteCarloGlauber.jl"); \
+        Pkg.add(["Plots", "YAML"]); \
+        Pkg.instantiate(); \
+        Pkg.precompile();'
+    
+%environment
+    export PATH=/opt/julia-1.12.1/bin:$PATH
+    export JULIA_DEPOT_PATH=/overlay/julia_depot:/opt/julia_depot
+
+%runscript
+    exec julia "$@"
