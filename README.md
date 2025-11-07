@@ -18,6 +18,7 @@ apptainer shell --overlay /lustre/alice/users/fcapell/julia_overlay.img:rw julia
 where the `rw` option means that the overlay is in a read-write mode. As a test, we can enter julia from here and check that the depot path is where we set it
 ```
 julia; println(DEPOT_PATH)
+["/overlay/julia_depot", "/opt/julia_depot"]
 ```
 To check that everything worked out, we can run a job that enters the overlay and uses those packages
 ```
