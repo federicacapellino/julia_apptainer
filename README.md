@@ -1,40 +1,28 @@
 # julia_apptainer
 How to create a julia apptainer and submit julia jobs
 
-First we create an apptainer `julia_to_overlay.sif` that contains julia, by downloading the desired version. Another option would be to install juliaup - still to be tried.
-In the `julia_to_overlay.def` the `JULIA_DEPOT_PATH` in `%environment` is already set to the writeable overlay that we will create later.
+## Create the apptainer
+First we create an apptainer `julia_apptainer.sif` that contains julia, by downloading the desired version. Another option would be to install juliaup - still to be tried.
+In the `julia_apptainer.def` the `JULIA_DEPOT_PATH` in `%environment` is local to the apptainer.
 ```
-apptainer build julia_to_overlay.sif julia_to_overlay.def
-```
-In `julia_to_overlay_2.def` you find the example for a more complete definition of the apptainer with the packages that you want to add in your overlay.
-Now, since the apptainer itself is read-only (and if made writeable, its disk space is limited to 64 MiB), we create a writeable overlay. The size of the overlay can be modified by the `--size` option.
-```
-apptainer overlay create --size 4096 /lustre/alice/users/fcapell/julia_overlay.img
-```
-We can now enter the overlay through the apptainer 
-```
-apptainer shell --overlay /lustre/alice/users/fcapell/julia_overlay.img:rw julia_to_overlay.sif
-```
-where the `rw` option means that the overlay is in a read-write mode. As a test, we can enter julia from here and check that the depot path is where we set it
-```
-julia; println(DEPOT_PATH)
-["/overlay/julia_depot", "/opt/julia_depot"]
-```
-To check that everything worked out, we can run a job that enters the overlay and uses those packages
-```
-sbatch debug.sh
-```
-Notice that you can not concurrently run multiple instances of the overlay in rw mode. The best choice is to stack a second small writeable overlay per job, and delete it at the end of each job
-```
-sbatch temporary.sh
+apptainer build julia_apptainer.sif julia_apptainer.def
 ```
 
-To check the occupied space of the overlay, run
+## Test the apptainer
+You can enter the apptainer interactively and enter julia
 ```
-du -sh /path/to/overlay/julia_overlay.img 
+apptainer shell julia_apptainer.sif
+julia
 ```
-You can extend it with
+```julia
+using LinearAlgebra
 ```
-truncate -s +2G /path/to/overlay/julia_overlay.img
+Now, since the apptainer itself is read-only, you cannot add more julia packages at run time - since you would need to modify the manifest.toml and project.toml. In case you want to add a new package, you should rebuild your container (or bootstrap from the image you already built).
+
+To check that everything worked out, we can run a job that enters the apptainer and uses those packages
 ```
+sbatch test_apptainer.sh
+```
+Notice that in the `julia_apptainer.def` you specify the JULIA_CPU_TARGET: when running on different partitions that will have different cpu architectures, julia wants to recompile if the compilation for that specific cpu has not been cached already. This has to be specified at build time (with the variable in the `post`) to cache the precompilation, and at runtime (with the variable in the `environment`) to address those compilations.
+
 If everything worked out, enjoy :)

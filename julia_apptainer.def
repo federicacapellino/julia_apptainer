@@ -1,0 +1,29 @@
+Bootstrap: docker
+From: julia:1.12
+
+#post is buildtime
+%post
+    #the cpu target could be read in directly by the cluster
+    #When Julia precompiles a package, it looks at JULIA_CPU_TARGET to decide which architectures to bake into the cache.
+    #What happens if you omit it: Julia will detect the host machine's specific CPU (e.g., the specific Intel Xeon on the build node) and compile only for that. When you later try to run that container on an AMD node, the code will be incompatible.
+    export JULIA_CPU_TARGET="generic;znver2,clone_all;znver3,clone_all;znver4,clone_all;cascadelake,clone_all"
+    export JULIA_DEPOT_PATH="/opt/julia_depot"
+    mkdir -p /opt/julia_depot
+
+    # Install packages
+    julia -e '
+        using Pkg;
+        Pkg.add(["YAML", "MonteCarloGlauber", "StaticArrays", "LinearAlgebra", "Integrals", "Cuba", "JLD2", "HDF5", "MuladdMacro", "OhMyThreads", "Interpolations", "DelimitedFiles"]); 
+        Pkg.add(url="https://github.com/fafafrens/Fluidum.jl");
+        Pkg.precompile();
+    '
+#environment is runtime
+#At runtime, Julia needs to know that the precompiled "fat" cache actually contains multiple versions. By setting JULIA_CPU_TARGET here, you tell the Julia runtime: "Don't just look for a native match; I have provided specialized code for all these architectures inside the depot."
+What happens if you omit it: Julia might ignore the extra optimized slices you built and try to "re-precompile" the code at runtime to match the current node, or fall back to a slower generic version because it doesn't realize the optimized version is sitting right there in the cache.
+%environment
+    export JULIA_CPU_TARGET="generic;znver2,clone_all;znver3,clone_all;znver4,clone_all;cascadelake,clone_all"
+    export JULIA_DEPOT_PATH="/opt/julia_depot"
+    export JULIA_PKG_PRECOMPILE_AUTO=0
+
+%runscript
+    exec julia "$@"
